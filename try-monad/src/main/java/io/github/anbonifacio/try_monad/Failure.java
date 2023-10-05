@@ -98,7 +98,7 @@ public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
 
     @Override
     public Try<T> recover(Function<? super Throwable, T> fn) {
-        return of(() -> fn.apply(getCause()));
+        return Try.of(() -> fn.apply(getCause()));
     }
 
     @Override
