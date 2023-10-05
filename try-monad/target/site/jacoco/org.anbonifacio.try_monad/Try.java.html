@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="it"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Try.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">try-monad</a> &gt; <a href="index.source.html" class="el_package">org.anbonifacio.try_monad</a> &gt; <span class="el_source">Try.java</span></div><h1>Try.java</h1><pre class="source lang-java linenums">package org.anbonifacio.try_monad;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+public sealed interface Try&lt;T&gt; permits Success, Failure {
+
+    static &lt;T&gt; Try&lt;T&gt; of(Supplier&lt;? extends T&gt; supplier) {
+<span class="fc" id="L14">        Objects.requireNonNull(supplier, &quot;supplier is null&quot;);</span>
+        try {
+<span class="fc" id="L16">            return new Success&lt;&gt;(supplier.get());</span>
+<span class="fc" id="L17">        } catch (Throwable t) {</span>
+<span class="fc" id="L18">            return new Failure&lt;&gt;(t);</span>
+        }
+    }
+
+    static &lt;T&gt; Try&lt;T&gt; ofCallable(Callable&lt;? extends T&gt; callable) {
+<span class="fc" id="L23">        Objects.requireNonNull(callable, &quot;callable is null&quot;);</span>
+        try {
+<span class="fc" id="L25">            return new Success&lt;&gt;(callable.call());</span>
+<span class="fc" id="L26">        } catch (Throwable t) {</span>
+<span class="fc" id="L27">            return new Failure&lt;&gt;(t);</span>
+        }
+    }
+
+    static Try&lt;Void&gt; ofRunnable(Runnable runnable) {
+<span class="fc" id="L32">        Objects.requireNonNull(runnable, &quot;runnable is null&quot;);</span>
+        try {
+<span class="fc" id="L34">            runnable.run();</span>
+<span class="fc" id="L35">            return new Success&lt;&gt;(null);</span>
+<span class="fc" id="L36">        } catch (Throwable t) {</span>
+<span class="fc" id="L37">            return new Failure&lt;&gt;(t);</span>
+        }
+    }
+
+    default Try&lt;T&gt; andFinally(Runnable runnable) {
+<span class="fc" id="L42">        Objects.requireNonNull(runnable, &quot;runnable is null&quot;);</span>
+        try {
+<span class="fc" id="L44">            runnable.run();</span>
+<span class="fc" id="L45">            return this;</span>
+<span class="fc" id="L46">        } catch (Throwable t) {</span>
+<span class="fc" id="L47">            return new Failure&lt;&gt;(t);</span>
+        }
+    }
+
+    static &lt;T&gt; Try&lt;T&gt; success(T value) {
+<span class="fc" id="L52">        return new Success&lt;&gt;(value);</span>
+    }
+
+    static &lt;T&gt; Try&lt;T&gt; failure(Throwable exception) {
+<span class="fc" id="L56">        return new Failure&lt;&gt;(exception);</span>
+    }
+
+    &lt;U&gt; Try&lt;U&gt; flatMap(Function&lt;? super T, ? extends Try&lt;? extends U&gt;&gt; mapper);
+
+    &lt;U&gt; Try&lt;U&gt; map(Function&lt;? super T, ? extends U&gt; mapper);
+
+    &lt;U&gt; U fold(Function&lt;? super Throwable, ? extends U&gt; ifFail, Function&lt;? super T, ? extends U&gt; f);
+
+    boolean isFailure();
+
+    boolean isSuccess();
+
+    Optional&lt;T&gt; getSuccess();
+
+    Optional&lt;T&gt; toOptional();
+
+    CompletionStage&lt;T&gt; toCompletionStage();
+
+    Optional&lt;Throwable&gt; getFailure();
+
+    T get();
+
+    Throwable getCause();
+
+    Try&lt;T&gt; filter(Predicate&lt;? super T&gt; p);
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    default Try&lt;T&gt; orElseTry(Supplier&lt;Try&lt;? extends T&gt;&gt; fn) {
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        return isSuccess() ? this : (Try&lt;T&gt;) fn.get();</span>
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    default Try&lt;T&gt; orElseTry(Try&lt;? extends T&gt; other) {
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        return isSuccess() ? this : (Try&lt;T&gt;) other;</span>
+    }
+
+    default T orElse(T other) {
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        return isSuccess() ? this.get() : other;</span>
+    }
+
+    default T orElseGet(Supplier&lt;? extends T&gt; fn) {
+<span class="pc bpc" id="L98" title="1 of 2 branches missed.">        return isSuccess() ? this.get() : fn.get();</span>
+    }
+
+    default &lt;X extends Throwable&gt; T orElseThrow(Supplier&lt;? extends X&gt; exceptionSupplier) throws X {
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (isFailure()) {</span>
+<span class="fc" id="L103">            throw exceptionSupplier.get();</span>
+        } else {
+<span class="nc" id="L105">            return this.get();</span>
+        }
+    }
+
+    Try&lt;T&gt; recover(Function&lt;? super Throwable, T&gt; fn);
+
+    Try&lt;T&gt; recoverWith(Function&lt;? super Throwable, Try&lt;T&gt;&gt; fn);
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304240956</span></div></body></html>
