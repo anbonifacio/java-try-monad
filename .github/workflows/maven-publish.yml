@@ -28,7 +28,5 @@ jobs:
     - name: Build with Maven
       run: mvn -B package --file try-monad/pom.xml
 
-    - name: Publish to GitHub Packages Apache Maven
+    - name: Publish to Apache Maven Central
       run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml --file try-monad/pom.xml
-      env:
-        GITHUB_TOKEN: ${{ github.token }}

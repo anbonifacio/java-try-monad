@@ -6,7 +6,7 @@
 
     <groupId>io.github.anbonifacio</groupId>
     <artifactId>try-monad</artifactId>
-    <version>0.9-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <properties>
 
