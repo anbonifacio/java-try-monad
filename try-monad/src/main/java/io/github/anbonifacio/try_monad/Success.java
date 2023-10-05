@@ -9,7 +9,7 @@
  *
  */
 
-package org.anbonifacio.try_monad;
+package io.github.anbonifacio.try_monad;
 
 import java.io.Serial;
 import java.io.Serializable;

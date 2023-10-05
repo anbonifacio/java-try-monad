@@ -9,7 +9,7 @@
  *
  */
 
-package org.anbonifacio.try_monad;
+package io.github.anbonifacio.try_monad;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

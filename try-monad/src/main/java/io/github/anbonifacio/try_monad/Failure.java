@@ -9,7 +9,7 @@
  *
  */
 
-package org.anbonifacio.try_monad;
+package io.github.anbonifacio.try_monad;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -98,7 +98,7 @@ public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
 
     @Override
     public Try<T> recover(Function<? super Throwable, T> fn) {
-        return Try.of(() -> fn.apply(getCause()));
+        return of(() -> fn.apply(getCause()));
     }
 
     @Override
