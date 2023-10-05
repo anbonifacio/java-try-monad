@@ -23,6 +23,23 @@
 hs_err_pid*
 replay_pid*
 
-#Idea
+# eclipse
+*.project
+*.settings
+*.classpath
+
+# maven
+*target
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# vscode
+*.vscode
+.factorypath
+
+# intellij
 .idea
 *.iml
+
+.DS_Store
