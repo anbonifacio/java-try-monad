@@ -12,6 +12,12 @@
     <url>https://github.com/anbonifacio/java-try-monad</url>
     <description>A Try monad implementation for Java 17</description>
 
+    <scm>
+        <connection>https://github.com/anbonifacio/java-try-monad.git</connection>
+        <developerConnection>https://github.com/anbonifacio/java-try-monad.git</developerConnection>
+        <url>https://github.com/anbonifacio/java-try-monad/tree/main</url>
+    </scm>
+
     <properties>
 
         <maven.compiler.source>17</maven.compiler.source>
