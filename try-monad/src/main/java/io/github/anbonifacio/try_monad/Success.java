@@ -22,6 +22,11 @@ import java.util.function.Predicate;
 
 import static java.util.concurrent.CompletableFuture.completedStage;
 
+/**
+ * The type Success.
+ *
+ * @param <T>  the type parameter
+ */
 public record Success<T>(T value) implements Try<T>, Serializable {
     @Serial
     private static final long serialVersionUID = 1L;

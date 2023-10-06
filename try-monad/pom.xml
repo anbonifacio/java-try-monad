@@ -8,6 +8,10 @@
     <artifactId>try-monad</artifactId>
     <version>1.0.0</version>
 
+    <name>Java Try monad</name>
+    <url>https://github.com/anbonifacio/java-try-monad</url>
+    <description>A Try monad implementation for Java 17</description>
+
     <properties>
 
         <maven.compiler.source>17</maven.compiler.source>
@@ -29,12 +33,31 @@
         <version.plugin.install>3.1.1</version.plugin.install>
         <version.plugin.jar>3.3.0</version.plugin.jar>
         <version.plugin.javadoc>2.9.1</version.plugin.javadoc>
+        <version.plugin.jacoco>0.8.10</version.plugin.jacoco>
         <version.plugin.release>2.5.3</version.plugin.release>
         <version.plugin.source>3.3.0</version.plugin.source>
         <version.plugin.versions>2.8.1</version.plugin.versions>
         <version.plugin.palantir>2.38.0</version.plugin.palantir>
         <version.plugin.spotless>2.39.0</version.plugin.spotless>
     </properties>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://raw.githubusercontent.com/anbonifacio/java-try-monad/main/LICENSE</url>
+            <distribution>may be downloaded from the Maven repository</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Antonio Bonifacio</name>
+            <email>anbonifacio85@gmail.com</email>
+            <organization>Antonio Bonifacio</organization>
+            <organizationUrl>https://github.com/anbonifacio</organizationUrl>
+        </developer>
+    </developers>
+
 
     <dependencies>
         <dependency>
@@ -52,7 +75,6 @@
     </dependencies>
 
     <build>
-
         <defaultGoal>clean compile</defaultGoal>
 
         <pluginManagement>
@@ -180,6 +202,23 @@
                             <goals>
                                 <goal>sign</goal>
                             </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${version.plugin.jacoco}</version>
+                    <executions>
+                        <execution>
+                            <id>jacoco-aggregate</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report-aggregate</goal>
+                            </goals>
+                            <configuration>
+                                <skip>${skipJacocoAggregate}</skip>
+                            </configuration>
                         </execution>
                     </executions>
                 </plugin>

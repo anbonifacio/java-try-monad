@@ -19,8 +19,20 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+/**
+ * The interface Try.
+ *
+ * @param <T>  the type parameter
+ */
 public sealed interface Try<T> permits Success, Failure {
 
+    /**
+     * Of try.
+     *
+     * @param <T>  the type parameter
+     * @param supplier the supplier
+     * @return the try
+     */
     static <T> Try<T> of(Supplier<? extends T> supplier) {
         Objects.requireNonNull(supplier, "supplier is null");
         try {
@@ -30,6 +42,13 @@ public sealed interface Try<T> permits Success, Failure {
         }
     }
 
+    /**
+     * Of callable try.
+     *
+     * @param <T>  the type parameter
+     * @param callable the callable
+     * @return the try
+     */
     static <T> Try<T> ofCallable(Callable<? extends T> callable) {
         Objects.requireNonNull(callable, "callable is null");
         try {
@@ -39,6 +58,12 @@ public sealed interface Try<T> permits Success, Failure {
         }
     }
 
+    /**
+     * Of runnable try.
+     *
+     * @param runnable the runnable
+     * @return the try
+     */
     static Try<Void> ofRunnable(Runnable runnable) {
         Objects.requireNonNull(runnable, "runnable is null");
         try {
@@ -49,6 +74,12 @@ public sealed interface Try<T> permits Success, Failure {
         }
     }
 
+    /**
+     * And finally try.
+     *
+     * @param runnable the runnable
+     * @return the try
+     */
     default Try<T> andFinally(Runnable runnable) {
         Objects.requireNonNull(runnable, "runnable is null");
         try {
@@ -59,56 +90,170 @@ public sealed interface Try<T> permits Success, Failure {
         }
     }
 
+    /**
+     * Success try.
+     *
+     * @param <T>  the type parameter
+     * @param value the value
+     * @return the try
+     */
     static <T> Try<T> success(T value) {
         return new Success<>(value);
     }
 
+    /**
+     * Failure try.
+     *
+     * @param <T>  the type parameter
+     * @param exception the exception
+     * @return the try
+     */
     static <T> Try<T> failure(Throwable exception) {
         return new Failure<>(exception);
     }
 
+    /**
+     * Flat map try.
+     *
+     * @param <U>  the type parameter
+     * @param mapper the mapper
+     * @return the try
+     */
     <U> Try<U> flatMap(Function<? super T, ? extends Try<? extends U>> mapper);
 
+    /**
+     * Map try.
+     *
+     * @param <U>  the type parameter
+     * @param mapper the mapper
+     * @return the try
+     */
     <U> Try<U> map(Function<? super T, ? extends U> mapper);
 
+    /**
+     * Fold u.
+     *
+     * @param <U>  the type parameter
+     * @param ifFail the if fail
+     * @param f the f
+     * @return the u
+     */
     <U> U fold(Function<? super Throwable, ? extends U> ifFail, Function<? super T, ? extends U> f);
 
+    /**
+     * Is failure boolean.
+     *
+     * @return the boolean
+     */
     boolean isFailure();
 
+    /**
+     * Is success boolean.
+     *
+     * @return the boolean
+     */
     boolean isSuccess();
 
+    /**
+     * Gets success.
+     *
+     * @return the success
+     */
     Optional<T> getSuccess();
 
+    /**
+     * To optional optional.
+     *
+     * @return the optional
+     */
     Optional<T> toOptional();
 
+    /**
+     * To completion stage completion stage.
+     *
+     * @return the completion stage
+     */
     CompletionStage<T> toCompletionStage();
 
+    /**
+     * Gets failure.
+     *
+     * @return the failure
+     */
     Optional<Throwable> getFailure();
 
+    /**
+     * Get t.
+     *
+     * @return the t
+     */
     T get();
 
+    /**
+     * Gets cause.
+     *
+     * @return the cause
+     */
     Throwable getCause();
 
+    /**
+     * Filter try.
+     *
+     * @param p the p
+     * @return the try
+     */
     Try<T> filter(Predicate<? super T> p);
 
+    /**
+     * Or else try try.
+     *
+     * @param fn the fn
+     * @return the try
+     */
     @SuppressWarnings("unchecked")
     default Try<T> orElseTry(Supplier<Try<? extends T>> fn) {
         return isSuccess() ? this : (Try<T>) fn.get();
     }
 
+    /**
+     * Or else try try.
+     *
+     * @param other the other
+     * @return the try
+     */
     @SuppressWarnings("unchecked")
     default Try<T> orElseTry(Try<? extends T> other) {
         return isSuccess() ? this : (Try<T>) other;
     }
 
+    /**
+     * Or else t.
+     *
+     * @param other the other
+     * @return the t
+     */
     default T orElse(T other) {
         return isSuccess() ? this.get() : other;
     }
 
+    /**
+     * Or else get t.
+     *
+     * @param fn the fn
+     * @return the t
+     */
     default T orElseGet(Supplier<? extends T> fn) {
         return isSuccess() ? this.get() : fn.get();
     }
 
+    /**
+     * Or else throw t.
+     *
+     * @param <X>  the type parameter
+     * @param exceptionSupplier the exception supplier
+     * @return the t
+     * @throws X the x
+     */
     default <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier) throws X {
         if (isFailure()) {
             throw exceptionSupplier.get();
@@ -117,7 +262,19 @@ public sealed interface Try<T> permits Success, Failure {
         }
     }
 
+    /**
+     * Recover try.
+     *
+     * @param fn the fn
+     * @return the try
+     */
     Try<T> recover(Function<? super Throwable, T> fn);
 
+    /**
+     * Recover with try.
+     *
+     * @param fn the fn
+     * @return the try
+     */
     Try<T> recoverWith(Function<? super Throwable, Try<T>> fn);
 }

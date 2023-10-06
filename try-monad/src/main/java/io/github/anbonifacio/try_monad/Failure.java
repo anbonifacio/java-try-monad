@@ -22,10 +22,20 @@ import java.util.function.Predicate;
 
 import static java.util.concurrent.CompletableFuture.failedStage;
 
+/**
+ * The type Failure.
+ *
+ * @param <T>  the type parameter
+ */
 public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Instantiates a new Failure.
+     *
+     * @param cause the cause
+     */
     public Failure {
         Objects.requireNonNull(cause, "cause is null");
         if (isFatal(cause)) {
