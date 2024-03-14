@@ -18,13 +18,18 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.sql.SQLException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.toBinaryString;
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatRuntimeException;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 class TryTest {
@@ -252,7 +257,7 @@ class TryTest {
     }
 
     @Test
-    void OrElseOnOnFailureShouldReturnNewFailureIfTheGivenTryFails() {
+    void OrElseTryOnFailureShouldReturnNewFailureIfTheGivenTryFails() {
         var result = Try.of(() -> {
                     throw new RuntimeException();
                 })
@@ -260,6 +265,7 @@ class TryTest {
                     throw new NullPointerException();
                 }));
         assertThat(result.isFailure()).isTrue();
+        assertThat(result.getFailure()).containsInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -325,20 +331,6 @@ class TryTest {
                 .isThrownBy(result::get)
                 .withMessage("Try is Failure")
                 .withCause(new NumberFormatException());
-    }
-
-    @Test
-    void toOptionalOnSuccessShouldHaveNonEmptyValue() {
-        assertThat(Try.of(() -> 2).toOptional()).contains(2);
-    }
-
-    @Test
-    void toOptionalOnFailureShouldReturnEmpty() {
-        assertThat(Try.of(() -> {
-                            throw new RuntimeException();
-                        })
-                        .toOptional())
-                .isNotPresent();
     }
 
     @Test
@@ -431,7 +423,8 @@ class TryTest {
     @Test
     void shouldThrowNewExceptionWhenOrElseThrowOnFailure() {
         assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> Try.failure(new IndexOutOfBoundsException()).orElseThrow(IllegalStateException::new));
+                .isThrownBy(() -> Try.failure(new IndexOutOfBoundsException()).orElseThrow(IllegalStateException::new))
+                .withCauseInstanceOf(IndexOutOfBoundsException.class);
     }
 
     @Test
@@ -585,5 +578,66 @@ class TryTest {
         var try1 = Try.failure(new InterruptedIOException("TEST"));
 
         assertThat(try1).hasToString("Failure[cause=java.io.InterruptedIOException: TEST]");
+    }
+
+    @Test
+    void shouldTryCheckedExceptionForSupplier() {
+
+        var testClass = new CheckedExceptionClassImpl();
+
+        var result = Try.of(testClass::checked);
+
+        assertThat(result.isSuccess()).isTrue();
+    }
+
+    private static Stream<Arguments> checkedExceptions() {
+        return Stream.of(new Exception(), new IOException(), new SQLException()).map(Arguments::of);
+    }
+
+    @ParameterizedTest
+    @MethodSource("checkedExceptions")
+    void shouldFailSupplierWithThrownCheckedException(Exception checkedException) {
+        // when
+        var result = Try.of(() -> {
+            throw checkedException;
+        });
+
+        // then
+        assertThat(result.isFailure()).isTrue();
+        assertThat(result.getCause()).isEqualTo(checkedException);
+    }
+
+    @Test
+    void shouldTryCheckedExceptionForRunnable() {
+
+        var testClass = new CheckedExceptionClassImpl();
+
+        var result = Try.ofRunnable(testClass::checked);
+
+        assertThat(result.isSuccess()).isTrue();
+    }
+
+    @ParameterizedTest
+    @MethodSource("checkedExceptions")
+    void shouldFailRunnableWithThrownCheckedException(Exception checkedException) {
+        // when
+        var result = Try.ofRunnable(() -> {
+            throw checkedException;
+        });
+
+        // then
+        assertThat(result.isFailure()).isTrue();
+        assertThat(result.getCause()).isEqualTo(checkedException);
+    }
+
+    interface CheckedExceptionClass {
+        int checked() throws IOException;
+    }
+
+    static class CheckedExceptionClassImpl implements CheckedExceptionClass {
+        @Override
+        public int checked() throws IOException {
+            return 0;
+        }
     }
 }

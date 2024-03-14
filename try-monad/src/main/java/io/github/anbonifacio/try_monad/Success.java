@@ -23,9 +23,11 @@ import java.util.function.Predicate;
 import static java.util.concurrent.CompletableFuture.completedStage;
 
 /**
- * The type Success.
+ * The successful result of some operation. In this context, <em>success</em> means that the operation
+ * completed without throwing any exception.
  *
- * @param <T>  the type parameter
+ * @param value the result of the operation (or {@code null} if the operation is {@code void})
+ * @param <T> the type of the result (or {@link Void} if the operation is {@code void})
  */
 public record Success<T>(T value) implements Try<T>, Serializable {
     @Serial
@@ -68,11 +70,6 @@ public record Success<T>(T value) implements Try<T>, Serializable {
 
     @Override
     public Optional<T> getSuccess() {
-        return Optional.of(value);
-    }
-
-    @Override
-    public Optional<T> toOptional() {
         return Optional.of(value);
     }
 

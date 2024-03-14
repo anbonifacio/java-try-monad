@@ -11,6 +11,10 @@
 
 package io.github.anbonifacio.try_monad;
 
+import io.github.anbonifacio.try_monad.interfaces.checked.CheckedRunnable;
+import io.github.anbonifacio.try_monad.interfaces.checked.CheckedSupplier;
+
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -20,18 +24,24 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * The interface Try.
+ * Functional version of the imperative {@code try-catch-finally} construct
  *
- * @param <T>  the type parameter
+ * @param <T> result of the tried operation (or {@link Void} if no result is expected)
+ *
+ * @implNote some <b>fatal</b> exceptions will never be caught by this class and will be thrown
+ * directly back to the caller. These are exceptions that should never be caught anyway
+ * (see {@link Failure#isFatal(Throwable)} to see which exceptions are considered fatal).
  */
 public sealed interface Try<T> permits Success, Failure {
 
     /**
-     * Of try.
+     * Creates a new {@link Try} containing the result of {@code supplier.call()}.
      *
-     * @param <T>  the type parameter
-     * @param supplier the supplier
-     * @return the try
+     * @return if {@code supplier} does not throw any exception, a {@link Success} containing the
+     * value returned by {@code supplier};
+     * <p>otherwise, a {@link Failure} containing the exception thrown by {@code supplier}.
+     *
+     * @throws NullPointerException if {@code runnable} is null
      */
     static <T> Try<T> of(Supplier<? extends T> supplier) {
         Objects.requireNonNull(supplier, "supplier is null");
@@ -43,11 +53,26 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
-     * Of callable try.
+     * Variant of {@link #of(Supplier)} that allows the given {@code supplier} to throw checked
+     * exceptions.
+     */
+    static <T> Try<T> of(CheckedSupplier<? extends T> supplier) {
+        Objects.requireNonNull(supplier, "supplier is null");
+        try {
+            return new Success<>(supplier.checkedGet());
+        } catch (Throwable t) {
+            return new Failure<>(t);
+        }
+    }
+
+    /**
+     * Creates a new {@link Try} containing the result of {@code callable.call()}.
      *
-     * @param <T>  the type parameter
-     * @param callable the callable
-     * @return the try
+     * @return if {@code callable} does not throw any exception, a {@link Success} containing the
+     * value returned by {@code callable};
+     * <p>otherwise, a {@link Failure} containing the exception thrown by {@code callable}.
+     *
+     * @throws NullPointerException if {@code runnable} is null
      */
     static <T> Try<T> ofCallable(Callable<? extends T> callable) {
         Objects.requireNonNull(callable, "callable is null");
@@ -59,10 +84,12 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
-     * Of runnable try.
+     * Creates a new {@link Try} containing the result of {@code runnable.run()}.
      *
-     * @param runnable the runnable
-     * @return the try
+     * @return if {@code runnable} does not throw any exception, a {@link Success} containing the {@code null};
+     * <p>otherwise, a {@link Failure} containing the exception thrown by {@code runnable}.
+     *
+     * @throws NullPointerException if {@code runnable} is null
      */
     static Try<Void> ofRunnable(Runnable runnable) {
         Objects.requireNonNull(runnable, "runnable is null");
@@ -75,10 +102,27 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
-     * And finally try.
+     * Variant of {@link #ofRunnable(Runnable)} that allows the given {@code runnable} to throw
+     * checked exceptions
+     */
+    static Try<Void> ofRunnable(CheckedRunnable runnable) {
+        Objects.requireNonNull(runnable, "runnable is null");
+        try {
+            runnable.checkedRun();
+            return new Success<>(null);
+        } catch (Throwable t) {
+            return new Failure<>(t);
+        }
+    }
+
+    /**
+     * Just like a {@code finally} block, runs the given {@code runnable} regardless of whether this
+     * is a {@link Success} or a {@link Failure}.
      *
-     * @param runnable the runnable
-     * @return the try
+     * @return itself, or a {@link Failure} containing the exception caught while running
+     * {@code runnable}, if any is thrown.
+     *
+     * @throws NullPointerException if {@code runnable} is null
      */
     default Try<T> andFinally(Runnable runnable) {
         Objects.requireNonNull(runnable, "runnable is null");
@@ -91,124 +135,95 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
-     * Success try.
-     *
-     * @param <T>  the type parameter
-     * @param value the value
-     * @return the try
+     * Creates a new {@link Success} with the given {@code value} as result.
      */
     static <T> Try<T> success(T value) {
         return new Success<>(value);
     }
 
     /**
-     * Failure try.
-     *
-     * @param <T>  the type parameter
-     * @param exception the exception
-     * @return the try
+     * Creates a new {@link Failure} with the given {@code exception} as cause.
      */
     static <T> Try<T> failure(Throwable exception) {
         return new Failure<>(exception);
     }
 
     /**
-     * Flat map try.
-     *
-     * @param <U>  the type parameter
-     * @param mapper the mapper
-     * @return the try
+     * @return itself if this is a {@link Failure};
+     * <p>if this is a {@link Success}, either:<ul>
+     *     <li>the result of applying the given {@code mapper} to its {@link #get() result}.
+     *     <li>a {@link Failure} containing the caught exception, if {@code mapper} throws any.
+     * </ul>
      */
     <U> Try<U> flatMap(Function<? super T, ? extends Try<? extends U>> mapper);
 
     /**
-     * Map try.
-     *
-     * @param <U>  the type parameter
-     * @param mapper the mapper
-     * @return the try
+     * @return itself if this is a {@link Failure};
+     * <p>if this is a {@link Success}, either:<ul>
+     *     <li>a {@link Success} containing the result of applying the given {@code mapper} to its result
+     *     <li>a {@link Failure} containing the caught exception, if {@code mapper} throws any.
+     * </ul>
      */
     <U> Try<U> map(Function<? super T, ? extends U> mapper);
 
     /**
-     * Fold u.
-     *
-     * @param <U>  the type parameter
-     * @param ifFail the if fail
-     * @param f the f
-     * @return the u
+     * @return the result of applying {@code ifFail} to the caught exception if this is a {@link Failure};
+     *         <p>the result of applying {@code f} to the result if this is a {@link Success}
      */
     <U> U fold(Function<? super Throwable, ? extends U> ifFail, Function<? super T, ? extends U> f);
 
-    /**
-     * Is failure boolean.
-     *
-     * @return the boolean
-     */
     boolean isFailure();
 
-    /**
-     * Is success boolean.
-     *
-     * @return the boolean
-     */
     boolean isSuccess();
 
     /**
-     * Gets success.
-     *
-     * @return the success
+     * @return {@link Optional} containing the result if this is a {@link Success};
+     * <p>{@link Optional#empty()} if this is a {@link Failure}.
      */
     Optional<T> getSuccess();
 
     /**
-     * To optional optional.
-     *
-     * @return the optional
-     */
-    Optional<T> toOptional();
-
-    /**
-     * To completion stage completion stage.
-     *
-     * @return the completion stage
+     * @return a completed {@link CompletionStage} containing the result if this is a {@link Success};
+     * <p>a failed {@link CompletionStage} containing the caught exception if this is a {@link Failure}
      */
     CompletionStage<T> toCompletionStage();
 
     /**
-     * Gets failure.
-     *
-     * @return the failure
+     * @return {@link Optional} containing the caught exception if this is a {@link Failure},
+     * {@link Optional#empty()} if this is a {@link Success}
      */
     Optional<Throwable> getFailure();
 
     /**
-     * Get t.
+     * @return the result if this is a {@link Success}
      *
-     * @return the t
+     * @throws NoSuchElementException if this is a {@link Failure}; the caught exception
+     * will be set as the cause
      */
-    T get();
+    T get() throws NoSuchElementException;
 
     /**
-     * Gets cause.
-     *
-     * @return the cause
+     * @return the caught exception if this is a {@link Failure}
+     * @throws NoSuchElementException if this is a {@link Success}
      */
-    Throwable getCause();
+    Throwable getCause() throws NoSuchElementException;
 
     /**
-     * Filter try.
-     *
-     * @param p the p
-     * @return the try
+     * @return itself, it this is a {@link Failure};
+     * <p>if this is a {@link Success}:
+     * <ul>
+     *     <li>if the result satisfies {@code p}, returns itself
+     *     <li>if the result does <b>NOT</b> satisfy {@code p},
+     *     returns a {@link Failure} containing a {@link NoSuchElementException}
+     *     <li>if {@code p} throws any exception, returns a {@link Failure} containing the caught
+     *     exception.
+     * </ul>
      */
     Try<T> filter(Predicate<? super T> p);
 
     /**
-     * Or else try try.
-     *
-     * @param fn the fn
-     * @return the try
+     * @return itself, if this is a {@link Success}
+     * <p>{@code fn.get()}, if this is a {@link Failure}
      */
     @SuppressWarnings("unchecked")
     default Try<T> orElseTry(Supplier<Try<? extends T>> fn) {
@@ -216,10 +231,8 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
-     * Or else try try.
-     *
-     * @param other the other
-     * @return the try
+     * @return itself, if this is a {@link Success}
+     * <p>{@code other}, if this is a {@link Failure}
      */
     @SuppressWarnings("unchecked")
     default Try<T> orElseTry(Try<? extends T> other) {
@@ -227,54 +240,48 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
-     * Or else t.
-     *
-     * @param other the other
-     * @return the t
+     * @return the {@link #get() result}, if this is a {@link Success}
+     * <p>{@code other}, if this is a {@link Failure}
      */
     default T orElse(T other) {
         return isSuccess() ? this.get() : other;
     }
 
     /**
-     * Or else get t.
-     *
-     * @param fn the fn
-     * @return the t
+     * @return the {@link #get() result}, if this is a {@link Success}
+     * <p>{@code fn.get()}, if this is a {@link Failure}
      */
     default T orElseGet(Supplier<? extends T> fn) {
         return isSuccess() ? this.get() : fn.get();
     }
 
     /**
-     * Or else throw t.
-     *
-     * @param <X>  the type parameter
-     * @param exceptionSupplier the exception supplier
-     * @return the t
-     * @throws X the x
+     * @return the {@link #get() result}, if this is a {@link Success}.
+     * @throws X if this is a {@link Failure} (throws the result of {@code exceptionMapper.apply(getCause())})
      */
-    default <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier) throws X {
+    default <X extends Throwable> T orElseThrow(Function<? super Throwable, ? extends X> exceptionMapper) throws X {
         if (isFailure()) {
-            throw exceptionSupplier.get();
+            throw exceptionMapper.apply(getCause());
         } else {
             return this.get();
         }
     }
 
     /**
-     * Recover try.
-     *
-     * @param fn the fn
-     * @return the try
+     * @return itself if this is a {@link Success};
+     * <p>if this is a {@link Failure}, either:<ul>
+     *     <li>a {@link Success} containing the result of applying the given {@code fn} to the {@link #getCause() cause}.
+     *     <li>a {@link Failure} containing the caught exception, if {@code fn} throws any.
+     * </ul>
      */
     Try<T> recover(Function<? super Throwable, T> fn);
 
     /**
-     * Recover with try.
-     *
-     * @param fn the fn
-     * @return the try
+     * @return itself if this is a {@link Success};
+     * <p>if this is a {@link Failure}, either:<ul>
+     *     <li>the result of applying the given {@code fn} to the {@link #getCause() cause}.
+     *     <li>a {@link Failure} containing the caught exception, if {@code fn} throws any.
+     * </ul>
      */
     Try<T> recoverWith(Function<? super Throwable, Try<T>> fn);
 }

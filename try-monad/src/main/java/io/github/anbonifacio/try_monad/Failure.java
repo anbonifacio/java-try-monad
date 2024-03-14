@@ -23,19 +23,19 @@ import java.util.function.Predicate;
 import static java.util.concurrent.CompletableFuture.failedStage;
 
 /**
- * The type Failure.
+ * The failed result of some operation. In this context, <em>failure</em> means that the operation
+ * threw an exception.
  *
- * @param <T>  the type parameter
+ * @implNote this record can never contain a <b>fatal</b> exception;
+ * see {@link Failure#isFatal(Throwable)} for more information.
+ *
+ * @param cause the exception that was caught while executing the operation (never {@code null})
+ * @param <T> the return type of the operation (or {@link Void} if the operation is {@code void})
  */
 public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    /**
-     * Instantiates a new Failure.
-     *
-     * @param cause the cause
-     */
     public Failure {
         Objects.requireNonNull(cause, "cause is null");
         if (isFatal(cause)) {
@@ -73,11 +73,6 @@ public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
 
     @Override
     public Optional<T> getSuccess() {
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<T> toOptional() {
         return Optional.empty();
     }
 
@@ -120,12 +115,19 @@ public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
         }
     }
 
+    /**
+     * @return {@code true} if {@code throwable} is fatal and should never be caught,
+     * {@code false} otherwise
+     */
     private static boolean isFatal(Throwable throwable) {
         return throwable instanceof InterruptedException
                 || throwable instanceof LinkageError
                 || throwable instanceof VirtualMachineError;
     }
 
+    /**
+     * Throws a checked exception as if it were unchecked by tricking the compiler
+     */
     @SuppressWarnings("unchecked")
     private static <T extends Throwable> void sneakyThrow(Throwable t) throws T {
         throw (T) t;
