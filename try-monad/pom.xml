@@ -6,7 +6,7 @@
 
     <groupId>io.github.anbonifacio</groupId>
     <artifactId>try-monad</artifactId>
-    <version>1.0.2-SNAPSHOT</version>
+    <version>1.0.2</version>
 
     <name>Java Try monad</name>
     <url>https://github.com/anbonifacio/java-try-monad</url>
