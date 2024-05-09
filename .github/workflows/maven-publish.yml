@@ -15,6 +15,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - name: Publish to GitHub Packages Apache Maven
-        run: mvn deploy
+        run: mvn deploy --file try-monad/pom.xml
         env:
           GITHUB_TOKEN: ${{ github.token }}
