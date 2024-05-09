@@ -17,10 +17,12 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.concurrent.CompletableFuture.failedStage;
+import static java.util.function.Function.identity;
 
 /**
  * The failed result of some operation. In this context, <em>failure</em> means that the operation
@@ -57,8 +59,14 @@ public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
     }
 
     @Override
-    public <U> U fold(Function<? super Throwable, ? extends U> ifFail, Function<? super T, ? extends U> f) {
-        return ifFail.apply(getCause());
+    public <U> U fold(Function<? super Throwable, ? extends U> onFailure, Function<? super T, ? extends U> onSuccess) {
+        return onFailure.apply(getCause());
+    }
+
+    @Override
+    public Try<T> peek(Consumer<? super Throwable> onFailure, Consumer<? super T> onSuccess) {
+        onFailure.accept(getCause());
+        return this;
     }
 
     @Override
@@ -102,17 +110,35 @@ public record Failure<T>(Throwable cause) implements Try<T>, Serializable {
     }
 
     @Override
-    public Try<T> recover(Function<? super Throwable, T> fn) {
+    public Try<T> recover(Function<? super Throwable, ? extends T> fn) {
         return Try.of(() -> fn.apply(getCause()));
     }
 
     @Override
-    public Try<T> recoverWith(Function<? super Throwable, Try<T>> fn) {
+    public <X extends Throwable> Try<T> recover(Class<X> exceptionType, Function<? super X, ? extends T> fn) {
+        if (exceptionType.isInstance(getCause())) {
+            return Try.of(() -> fn.apply(exceptionType.cast(getCause())));
+        }
+
+        return this;
+    }
+
+    @Override
+    public Try<T> recoverWith(Function<? super Throwable, ? extends Try<T>> fn) {
         try {
             return fn.apply(getCause());
         } catch (Throwable t) {
             return new Failure<>(t);
         }
+    }
+
+    @Override
+    public <X extends Throwable> Try<T> recoverWith(Class<X> exceptionType, Function<? super X, ? extends Try<T>> fn) {
+        if (exceptionType.isInstance(getCause())) {
+            return Try.of(() -> fn.apply(exceptionType.cast(getCause()))).flatMap(identity());
+        }
+
+        return this;
     }
 
     /**

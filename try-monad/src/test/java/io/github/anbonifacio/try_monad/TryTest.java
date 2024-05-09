@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.sql.SQLException;
 import java.util.NoSuchElementException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -138,6 +139,39 @@ class TryTest {
                     throw new AssertionError("Not expected to be called");
                 }))
                 .isEqualTo(42);
+    }
+
+    // -- Try.peek
+
+    @Test
+    void shouldPeekOnSuccess() {
+        // given
+        var failureRun = new AtomicBoolean(false);
+        var successRun = new AtomicBoolean(false);
+        var sut = Try.success(42);
+
+        // when
+        var result = sut.peek(t -> failureRun.set(true), r -> successRun.set(true));
+
+        // then
+        assertThat(result).isSameAs(sut);
+        assertThat(failureRun).isFalse();
+        assertThat(successRun).isTrue();
+    }
+
+    @Test
+    void shouldPeekOnFailure() {
+        // given
+        var failureRun = new AtomicBoolean(false);
+        var successRun = new AtomicBoolean(false);
+        var sut = Try.failure(new Throwable());
+
+        // when
+        var result = sut.peek(t -> failureRun.set(true), r -> successRun.set(true));
+
+        // then
+        assertThat(result).isSameAs(sut);
+        assertThat(successRun).isFalse();
     }
 
     // -- Try.ofCallable
@@ -353,11 +387,27 @@ class TryTest {
                 .isTrue();
     }
 
+    // -- recover/recoverWith
+
     @Test
     void recoverOnSuccessShouldShouldJustReturnSuccess() {
         var result = Try.of(() -> 2).recover((t) -> 0);
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.get().intValue()).isEqualTo(2);
+    }
+
+    @Test
+    void typedRecoverOnSuccessShouldShouldJustReturnSuccess() {
+        var result = Try.success(2).recover(IllegalStateException.class, t -> 0);
+        assertThat(result.isSuccess()).isTrue();
+        assertThat(result.get().intValue()).isEqualTo(2);
+    }
+
+    @Test
+    void typedRecoverOnFailureShouldShouldReturnItselfGivenCauseTypeMismatch() {
+        var failure = Try.failure(new IOException("test"));
+        var result = failure.recover(IllegalStateException.class, t -> 0);
+        assertThat(result).isEqualTo(failure);
     }
 
     @Test
@@ -368,6 +418,12 @@ class TryTest {
                 .recover((t) -> 0);
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.get()).isEqualTo(0);
+    }
+
+    @Test
+    void typedRecoverOnFailureShouldReturnSuccessGivenCauseTypeMatchesAndRecoverySucceeds() {
+        var result = Try.failure(new IOException("test")).recover(IOException.class, e -> 0);
+        assertThat(result).isEqualTo(Try.success(0));
     }
 
     @Test
@@ -382,10 +438,33 @@ class TryTest {
     }
 
     @Test
+    void typedRecoverOnFailureShouldReturnFailureIfRecoveryFails() {
+        var newCause = new ArrayIndexOutOfBoundsException();
+        var result = Try.failure(new NoSuchElementException()).recover(NoSuchElementException.class, e -> {
+            throw newCause;
+        });
+        assertThat(result).isEqualTo(Try.failure(newCause));
+    }
+
+    @Test
     void recoverWithOnSuccessShouldJustReturnSuccess() {
         var result = Try.of(() -> 2).recoverWith((t) -> Try.of(() -> 0));
         assertThat(result.isSuccess()).isTrue();
         assertThat(result.get().intValue()).isEqualTo(2);
+    }
+
+    @Test
+    void typedRecoverWithOnSuccessShouldJustReturnSuccess() {
+        var success = Try.success(2);
+        var result = success.recoverWith(IllegalArgumentException.class, t -> Try.success(0));
+        assertThat(result).isEqualTo(success);
+    }
+
+    @Test
+    void typedRecoverWithOnFailureShouldJustReturnItselfGivenCauseTypeMismatch() {
+        var failure = Try.failure(new Throwable());
+        var result = failure.recoverWith(IllegalArgumentException.class, t -> Try.success(0));
+        assertThat(result).isEqualTo(failure);
     }
 
     @Test
@@ -398,7 +477,15 @@ class TryTest {
         assertThat(result.get()).isEqualTo(0);
     }
 
-    @Test()
+    @Test
+    void typedRecoverWithOnFailureShouldReturnSuccessGivenCauseTypeMatchesAndRecoverySucceeds() {
+        var expected = Try.success(0);
+        var result = Try.<Integer>failure(new ArrayIndexOutOfBoundsException())
+                .recoverWith(ArrayIndexOutOfBoundsException.class, e -> expected);
+        assertThat(result).isEqualTo(expected);
+    }
+
+    @Test
     void recoverWithOnFailureShouldReturnFailureIfRecoveryFails() {
         var result = Try.of(() -> {
                     try {
@@ -413,11 +500,22 @@ class TryTest {
                     }
                     throw new NullPointerException();
                 })
-                .recover(t -> {
+                .recoverWith(t -> {
                     throw new ArrayIndexOutOfBoundsException();
                 });
         assertThat(result.isFailure()).isTrue();
         assertThatRuntimeException().isThrownBy(result::get);
+    }
+
+    @Test
+    void typedRecoverWithOnFailureShouldReturnFailureGivenCauseTypeMatchesAndRecoveryFails() {
+        var arrayIndexOutOfBoundsException = new ArrayIndexOutOfBoundsException();
+        var result = Try.failure(new IOException())
+                .recoverWith(ClassCastException.class, e -> Try.failure(new NullPointerException()))
+                .recoverWith(IOException.class, t -> {
+                    throw arrayIndexOutOfBoundsException;
+                });
+        assertThat(result).isEqualTo(Try.failure(arrayIndexOutOfBoundsException));
     }
 
     @Test

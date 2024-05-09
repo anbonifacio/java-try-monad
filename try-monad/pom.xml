@@ -6,7 +6,7 @@
 
     <groupId>io.github.anbonifacio</groupId>
     <artifactId>try-monad</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
 
     <name>Java Try monad</name>
     <url>https://github.com/anbonifacio/java-try-monad</url>
@@ -174,16 +174,6 @@
                     <artifactId>maven-install-plugin</artifactId>
                     <version>${version.plugin.install}</version>
                 </plugin>
-
-                <plugin>
-                    <artifactId>maven-deploy-plugin</artifactId>
-                    <version>2.8.2</version>
-                    <configuration>
-                        <altDeploymentRepository>
-                            internal.repo::default::file://${project.build.directory}/mvn-artifact
-                        </altDeploymentRepository>
-                    </configuration>
-                </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
@@ -249,32 +239,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>com.github.github</groupId>
-                <artifactId>site-maven-plugin</artifactId>
-                <version>0.12</version>
-                <configuration>
-                    <message>Maven artifacts for ${project.version}</message>
-                    <noJekyll>true</noJekyll>
-                    <outputDirectory>${project.build.directory}</outputDirectory>
-                    <branch>refs/heads/main</branch>
-                    <includes>
-                        <include>**/*</include>
-                    </includes>
-                    <merge>true</merge>
-                    <repositoryName>java-try-monad</repositoryName>
-                    <repositoryOwner>anbonifacio</repositoryOwner>
-                    <server>github</server>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>site</goal>
-                        </goals>
-                        <phase>deploy</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
                 <version>${version.plugin.spotless}</version>
@@ -316,9 +280,9 @@
 
     <distributionManagement>
         <repository>
-            <id>internal.repo</id>
-            <name>Temporary Staging Repository</name>
-            <url>file://${project.build.directory}/mvn-artifact</url>
+            <id>github</id>
+            <name>GitHub anbonifacio Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/anbonifacio/java-try-monad</url>
         </repository>
     </distributionManagement>
 

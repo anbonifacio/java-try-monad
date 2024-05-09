@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -167,10 +168,23 @@ public sealed interface Try<T> permits Success, Failure {
     <U> Try<U> map(Function<? super T, ? extends U> mapper);
 
     /**
-     * @return the result of applying {@code ifFail} to the caught exception if this is a {@link Failure};
-     *         <p>the result of applying {@code f} to the result if this is a {@link Success}
+     * @return the result of applying {@code onFailure} to the caught exception if this is a {@link Failure};
+     *         <p>the result of applying {@code onSuccess} to the result if this is a {@link Success}
      */
-    <U> U fold(Function<? super Throwable, ? extends U> ifFail, Function<? super T, ? extends U> f);
+    <U> U fold(Function<? super Throwable, ? extends U> onFailure, Function<? super T, ? extends U> onSuccess);
+
+    /**
+     * Runs either {@code onFailure} or {@code onSuccess}, then returns itself.
+     *
+     * @param onFailure action to run when this is a {@link Failure}
+     *                  (the {@link #getCause() cause} will be passed as argument to the {@link Consumer}).
+     * @param onSuccess action to run when this is a {@link Success}
+     *                  (the {@link #get() result} will be passed as argument to the {@link Consumer}).
+     *
+     * @return itself
+     * @see java.util.stream.Stream#peek(Consumer)
+     */
+    Try<T> peek(Consumer<? super Throwable> onFailure, Consumer<? super T> onSuccess);
 
     boolean isFailure();
 
@@ -268,20 +282,62 @@ public sealed interface Try<T> permits Success, Failure {
     }
 
     /**
+     * Transforms a {@link Failure} into a {@link Success} by using {@code fn}.
+     * <p>If {@code fn} throws any exception, the output will be a {@link Failure} containing that
+     * exception as cause.
+     * <p>This behaves similarly to {@link CompletionStage#exceptionally(Function)}
+     *
      * @return itself if this is a {@link Success};
      * <p>if this is a {@link Failure}, either:<ul>
      *     <li>a {@link Success} containing the result of applying the given {@code fn} to the {@link #getCause() cause}.
      *     <li>a {@link Failure} containing the caught exception, if {@code fn} throws any.
      * </ul>
      */
-    Try<T> recover(Function<? super Throwable, T> fn);
+    Try<T> recover(Function<? super Throwable, ? extends T> fn);
 
     /**
+     * Transforms a {@link Failure} into a {@link Success} by using {@code fn}, only if the
+     * {@link #getCause() cause} is an instance of {@code exceptionType} (i.e. {@code X}).
+     * <p>If {@code fn} throws any exception, the output will be a {@link Failure} containing that
+     * exception as cause.
+     *
+     * @return itself if this is a {@link Success};
+     * <p>if this is a {@link Failure}, either:<ul>
+     *     <li>itself, if the {@link #getCause() cause} is not an instance of {@code X}.
+     *     <li>a {@link Success} containing the result of applying the given {@code fn} to the
+     *     {@link #getCause() cause}, after casting it to {@code X}.
+     *     <li>a {@link Failure} containing the caught exception, if {@code fn} throws any.
+     * </ul>
+     */
+    <X extends Throwable> Try<T> recover(Class<X> exceptionType, Function<? super X, ? extends T> fn);
+
+    /**
+     * Transforms a {@link Failure} into the {@link Try} returned by {@code fn}.
+     * <p>If {@code fn} throws any exception, the output will be a {@link Failure} containing that
+     * exception as cause.
+     * <p>This behaves similarly to {@link CompletionStage#exceptionallyCompose(Function)}
+     *
      * @return itself if this is a {@link Success};
      * <p>if this is a {@link Failure}, either:<ul>
      *     <li>the result of applying the given {@code fn} to the {@link #getCause() cause}.
      *     <li>a {@link Failure} containing the caught exception, if {@code fn} throws any.
      * </ul>
      */
-    Try<T> recoverWith(Function<? super Throwable, Try<T>> fn);
+    Try<T> recoverWith(Function<? super Throwable, ? extends Try<T>> fn);
+
+    /**
+     * Transforms a {@link Failure} into the {@link Try} returned by {@code fn}, only if the
+     * {@link #getCause() cause} is an instance of {@code exceptionType} (i.e. {@code X}).
+     * <p>If {@code fn} throws any exception, the output will be a {@link Failure} containing that
+     * exception as cause.
+     *
+     * @return itself if this is a {@link Success};
+     * <p>if this is a {@link Failure}, either:<ul>
+     *     <li>itself, if the {@link #getCause() cause} is not an instance of {@code X}.
+     *     <li>the result of applying the given {@code fn} to the {@link #getCause() cause},
+     *     after casting it to {@code X}.
+     *     <li>a {@link Failure} containing the caught exception, if {@code fn} throws any.
+     * </ul>
+     */
+    <X extends Throwable> Try<T> recoverWith(Class<X> exceptionType, Function<? super X, ? extends Try<T>> fn);
 }

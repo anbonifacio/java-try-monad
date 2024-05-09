@@ -17,6 +17,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -54,8 +55,14 @@ public record Success<T>(T value) implements Try<T>, Serializable {
     }
 
     @Override
-    public <U> U fold(Function<? super Throwable, ? extends U> ifFail, Function<? super T, ? extends U> f) {
-        return f.apply(get());
+    public <U> U fold(Function<? super Throwable, ? extends U> onFailure, Function<? super T, ? extends U> onSuccess) {
+        return onSuccess.apply(get());
+    }
+
+    @Override
+    public Try<T> peek(Consumer<? super Throwable> onFailure, Consumer<? super T> onSuccess) {
+        onSuccess.accept(get());
+        return this;
     }
 
     @Override
@@ -108,12 +115,22 @@ public record Success<T>(T value) implements Try<T>, Serializable {
     }
 
     @Override
-    public Try<T> recover(Function<? super Throwable, T> fn) {
+    public Try<T> recover(Function<? super Throwable, ? extends T> fn) {
         return this;
     }
 
     @Override
-    public Try<T> recoverWith(Function<? super Throwable, Try<T>> fn) {
+    public <X extends Throwable> Try<T> recover(Class<X> exceptionType, Function<? super X, ? extends T> fn) {
+        return this;
+    }
+
+    @Override
+    public Try<T> recoverWith(Function<? super Throwable, ? extends Try<T>> fn) {
+        return this;
+    }
+
+    @Override
+    public <X extends Throwable> Try<T> recoverWith(Class<X> exceptionType, Function<? super X, ? extends Try<T>> fn) {
         return this;
     }
 }
